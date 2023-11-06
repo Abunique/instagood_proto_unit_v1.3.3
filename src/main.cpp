@@ -10,19 +10,19 @@
 //
 
 #include <Arduino.h>
-// #include <Servo.h>
+//#include <Servo.h>
 #include <LiquidCrystal_I2C.h>
 #include <EEPROM.h>
 
 #include <SPI.h>
 #include <TFT_eSPI.h> // Hardware-specific library
-                      // #include <006_qrcode.h>
-                      // #include <007_qrcode.h>
-                      // #include <008_qrcode.h>
-                      // #include <009_qrcode.h>
+// #include <006_qrcode.h>
+// #include <007_qrcode.h>
+// #include <008_qrcode.h>
+// #include <009_qrcode.h>
 
-#define BOARD_ID_15 15
-#include <qr-code.h>
+ #define BOARD_ID_vj_148 148
+ #include <qr-code.h>
 
 #define TINY_GSM_MODEM_SIM800
 #define SerialMon Serial
@@ -37,8 +37,6 @@
 #define MODEM_RX 26
 // #define MODEM_RI 35
 ////////////////////////////////////////
-// Manual buttoPn for stoping motor
-#define MANUAL_IN 36
 
 #define COIN_ACCEPTOR_INPUT 39
 #define NOTE_ACCEPTOR_INPUT 12
@@ -52,7 +50,7 @@
 #define USR_RST_SWITCH_PIN 35
 #define NFC_BUZZER 2
 
-#define Manual_PIN 4
+#define Manual_Pin 36
 
 #define SERVO_PIN 33
 
@@ -80,8 +78,8 @@ TinyGsmClient client(modem);
 PubSubClient mqtt(client);
 PN532_I2C pn532i2c(Wire);
 PN532 nfc(pn532i2c);
-// LiquidCrystal_I2C lcd(0x3F, 16, 2);
-LiquidCrystal_I2C lcd(0x20, 16, 2);
+//LiquidCrystal_I2C lcd(0x3F, 16, 2);
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 // Servo myservo;
 TFT_eSPI tft = TFT_eSPI(); // Invoke custom library
 
@@ -91,9 +89,9 @@ uint32_t lastReconnectAttempt = 0;
 long lastMsg = 0;
 
 boolean success;
-uint8_t uid[] = {0, 0, 0, 0, 0, 0, 0}; // Buffer to store the returned UID
-uint8_t uidLength;                     // Length of the UID (4 or 7 bytes depending on ISO14443A card type)
-
+uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 };  // Buffer to store the returned UID
+uint8_t uidLength;                        // Length of the UID (4 or 7 bytes depending on ISO14443A card type)
+  
 byte readCard[7];
 char UID[50];
 // int a;
@@ -154,8 +152,6 @@ void IRAM_ATTR USR_RST_INT1()
   // check_flag = true;
   stock_reset = true;
 }
-
-
 
 ////////////////////////////////////////////////////////////////
 
@@ -464,12 +460,13 @@ void array_to_string(byte a[], unsigned int len, char buffer[])
   }
   buffer[len * 2] = '\0';
 }
-
+bool Pin_status= LOW;
 void deliver()
 {
   /*
     put dispatch code here
   */
+ 
   digitalWrite(COIN_IN_ENABLE_OUTPUT, HIGH);
   delay(100);
   Serial.println("dispatch starts");
@@ -494,56 +491,45 @@ void deliver()
     // run timer for 4 seconds, if check_flag == true turn of motor.
     run_timer = true;
     previousMillis = millis();
-    attachInterrupt(DISPENSE_IR_INPUT1, DISPENSE_IR_INT1, RISING);
+attachInterrupt(DISPENSE_IR_INPUT1, DISPENSE_IR_INT1, RISING);
     // delay(100);
   }
 }
+
 
 void setupNFC()
 {
   ///////////////////NFC/////////////////
   nfc.begin();
- uint32_t versiondata = nfc.getFirmwareVersion();
-
+  uint32_t versiondata = nfc.getFirmwareVersion();
   if (!versiondata)
   {
     Serial.println("PN53x card not found!");
-    // while(1);//halt
+    //while(1);//halt
   }
-  //else
+  else
   {
-    // Got ok data, print it out!
-    Serial.print("Found chip PN5");
-    Serial.println((versiondata >> 24) & 0xFF, HEX);
-    Serial.print("Firmware ver. ");
-    Serial.print((versiondata >> 16) & 0xFF, DEC);
-    Serial.print('.');
-    Serial.println((versiondata >> 8) & 0xFF, DEC);
+     // Got ok data, print it out!
+  Serial.print("Found chip PN5"); Serial.println((versiondata>>24) & 0xFF, HEX); 
+  Serial.print("Firmware ver. "); Serial.print((versiondata>>16) & 0xFF, DEC); 
+  Serial.print('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
     // Set the max number of retry attempts to read from a card
-    // This prevents us from waiting forever for a card, which is
-    // the default behaviour of the PN532.
-    nfc.setPassiveActivationRetries(0x01);
+  // This prevents us from waiting forever for a card, which is
+  // the default behaviour of the PN532.
+  nfc.setPassiveActivationRetries(0x01);
     // configure board to read RFID tags
-    nfc.SAMConfig();
+  nfc.SAMConfig();
     Serial.println("Waiting for card (ISO14443A Mifare)...");
     Serial.println("");
   }
 }
 
 
-
-
-void IRAM_ATTR MANUAL_ISR()
-{
-  digitalWrite(COIN_IN_ENABLE_OUTPUT, HIGH);
-}
-
-
 void setup()
 {
 
-  pinMode(NFC_BUZZER, OUTPUT);
-  digitalWrite(NFC_BUZZER, LOW);
+  pinMode(NFC_BUZZER,OUTPUT);
+  digitalWrite(NFC_BUZZER,LOW);
 
   pinMode(MOTOR_FORWARD_PIN, OUTPUT);
   pinMode(MOTOR_REVERSE_PIN, OUTPUT);
@@ -551,26 +537,24 @@ void setup()
   digitalWrite(MOTOR_FORWARD_PIN, LOW);
   digitalWrite(MOTOR_REVERSE_PIN, LOW);
 
-  pinMode(Manual_PIN, INPUT);
- 
-
   pinMode(COIN_ACCEPTOR_INPUT, INPUT);
   pinMode(NOTE_ACCEPTOR_INPUT, INPUT);
 
   pinMode(DISPENSE_IR_INPUT1, INPUT);
-  // pinMode(DISPENSE_IR_INPUT2, INPUT);
+
+  pinMode(Manual_Pin, INPUT);
 
   pinMode(USR_RST_SWITCH_PIN, INPUT);
 
   pinMode(COIN_IN_ENABLE_OUTPUT, OUTPUT);
   digitalWrite(COIN_IN_ENABLE_OUTPUT, HIGH);
 
+
   SerialMon.begin(115200);
   // Serial.println(digitalRead(DISPENSE_IR_INPUT2));
   // delay(500);
-  Serial.print(BOARD_ID_15);
+  Serial.println(BOARD_ID_vj_148);
   Serial.println("Firmware : v1.3.2");
-  delay(3000);
   setupNFC();
 
   // myservo.attach(SERVO_PIN);
@@ -698,9 +682,9 @@ void setup()
   delay(100);
   attachInterrupt(COIN_ACCEPTOR_INPUT, COIN_ACCEPTOR_INT1, FALLING);
   attachInterrupt(NOTE_ACCEPTOR_INPUT, NOTE_ACCEPTOR_INT1, FALLING);
+
   attachInterrupt(USR_RST_SWITCH_PIN, USR_RST_INT1, FALLING);
- attachInterrupt(Manual_PIN,MANUAL_ISR,HIGH);
-  //attachInterrupt(MANUAL_IN, MANUAL_INT1, RISING);
+
   Serial.printf("\n%d %d %d", dispense_product, check_flag, run_timer);
 
   // myservo.attach(SERVO_PIN);
@@ -716,84 +700,62 @@ void setup()
   EEPROM_readAnything(0, count);
   lcd.setCursor(9, 1);
   lcd.print(count);
-  Serial.println(count);
-
-
+   Serial.println(count);
+   
 }
 
 bool stock_reload = true;
-bool Pin_status = LOW;
 
-       
+
 void loop()
 {
-  attachInterrupt(Manual_PIN,MANUAL_ISR,HIGH);
-  Pin_status = digitalRead(Manual_PIN);
-       if(!Pin_status){
-        digitalWrite(COIN_IN_ENABLE_OUTPUT, LOW);
-      coin_impulsCount = 0;
-      note_impulsCount = 0;
-        Pin_status = digitalRead(Manual_PIN);
-        detachInterrupt(Manual_PIN);
-        }
-    if (dispense_product == false)
-{
-  if (gprs_connected == true)
+  Pin_status = digitalRead(Manual_Pin);
+ while(Pin_status){
+digitalWrite(COIN_IN_ENABLE_OUTPUT, HIGH);
+Serial.println("Manual interrupt");
+Pin_status = digitalRead(Manual_Pin);
+if(!Pin_status){
+  digitalWrite(COIN_IN_ENABLE_OUTPUT, LOW);
+  coin_impulsCount = 0;
+  note_impulsCount = 0;
+}
+delay(1000);
+}
+  if (dispense_product == false)
   {
-    if (!mqtt.connected())
+    if (gprs_connected == true)
     {
-      // if (millis() - mqtt_previousMillis > 60000L)
-      //{
-      uint32_t t = millis();
-      if (t - lastReconnectAttempt > 60000L)
+      if (!mqtt.connected())
       {
-        SerialMon.println("=== MQTT NOT CONNECTED ===");
-        lastReconnectAttempt = t;
-        // mqtt_previousMillis = millis();
-        if (mqttConnect())
+        // if (millis() - mqtt_previousMillis > 60000L)
+        //{
+        uint32_t t = millis();
+        if (t - lastReconnectAttempt > 60000L)
         {
-          lastReconnectAttempt = 0;
+          SerialMon.println("=== MQTT NOT CONNECTED ===");
+          lastReconnectAttempt = t;
+          // mqtt_previousMillis = millis();
+          if (mqttConnect())
+          {
+            lastReconnectAttempt = 0;
+          }
         }
       }
+      else
+        mqtt.loop();
     }
-    else
-      mqtt.loop();
-  }
 
-  
-  if (stock_reset == true)
-  {
-    stock_reset = false;
-    count = 500;
-    EEPROM_writeAnything(0, count);
-    EEPROM.commit();
-    delay(100);
-    EEPROM_readAnything(stock_addr, count);
-    Serial.println(count);
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Instagood");
-    lcd.setCursor(0, 1);
-    lcd.print("In Stock:");
-    lcd.setCursor(9, 1);
-    lcd.print(count);
-  }
-  ///////////////////////////////////////////////////////////////////////////
-int proximity_value = digitalRead(DISPENSE_IR_INPUT1);
+    int proximity_value = digitalRead(DISPENSE_IR_INPUT1);
 
-  if (proximity_value == HIGH)
-  {
-    digitalWrite(25, LOW);
-    if (stock_reload == false)
+    if (stock_reset == true)
     {
-      if (digitalRead(COIN_IN_ENABLE_OUTPUT) == HIGH)
-        digitalWrite(COIN_IN_ENABLE_OUTPUT, LOW);
-      // delay(100);
-      attachInterrupt(COIN_ACCEPTOR_INPUT, COIN_ACCEPTOR_INT1, FALLING);
-      attachInterrupt(NOTE_ACCEPTOR_INPUT, NOTE_ACCEPTOR_INT1, FALLING);
-      stock_reload = true;
-      first_stock_empty = true;
+      stock_reset = false;
+      count = 500;
+      EEPROM_writeAnything(0, count);
+      EEPROM.commit();
+      delay(100);
       EEPROM_readAnything(stock_addr, count);
+      Serial.println(count);
       lcd.clear();
       lcd.setCursor(0, 0);
       lcd.print("Instagood");
@@ -801,286 +763,305 @@ int proximity_value = digitalRead(DISPENSE_IR_INPUT1);
       lcd.print("In Stock:");
       lcd.setCursor(9, 1);
       lcd.print(count);
-      setup3_5inchDisplay();
-      delay(500);
+    }
+    ///////////////////////////////////////////////////////////////////////////
+    if (proximity_value == HIGH)
+    {
       digitalWrite(25, LOW);
-    }
-
-    // int coin_value = digitalRead(coin);
-    // Serial.println("in");
-    // success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, &uid[0],loop &uidLength);
-    // // Serial.println("out");
-
-    // if (success) // NFC
-    // {
-    //   Serial.println("buzzer");
-    //   for (uint8_t i = 0; i < uidLength; i++) // NFC
-    //   {
-    //     readCard[i] = uid[i];
-    //   }
-    //   UID[0] = '\0';
-    //   array_to_string(readCard, 4, UID);
-
-    //   delay(5000);
-    //   NFC_DETAILS();
-    // }
-
-    // // UPI ACK
-    success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, &uid[0], &uidLength);
-
-    if (success)
-    {
-      Serial.println("Found a card!");
-      Serial.print("UID Length: ");
-      Serial.print(uidLength, DEC);
-      Serial.println(" bytes");
-      Serial.print("UID Value: ");
-
-      for (uint8_t i = 0; i < uidLength; i++)
+      if (stock_reload == false)
       {
-        Serial.print(" 0x");
-        Serial.print(uid[i], HEX); // serial monitor printing
-      }
-      Serial.println("");
-      // Wait 1 second before continuing
-      delay(500);
-      coin_impulsCount = 0;
-      note_impulsCount = 0;
-      // deliver();
-      digitalWrite(NFC_BUZZER, HIGH);
-      delay(500);
-      digitalWrite(NFC_BUZZER, LOW);
-    }
-
-    Serial.print("\nchecking for coin /note");
-    if ((COMMAND == "ack") && (DEVICE_ID == ID) && (PAYMENT == "success") && ((DISPATCH == "true")))
-    {
-      send_coin_note_UPI_ackMessage(3);
-      deliver();
-      // delay(1000);
-      upi_mqtt_flag = true;
-      // delay(1000);
-      DISPATCH = "false";
-      attachInterrupt(digitalPinToInterrupt(DISPENSE_IR_INPUT1), DISPENSE_IR_INT1, RISING);
-    }
-    // NFC ACK
-    else if ((COMMAND == "nfc_sack") && (DEVICE_ID == ID) && ((DISPATCH == "true")))
-    {
-      deliver();
-      // delay(1000);
-      nfc_mqtt_flag = true;
-      // delay(1000);
-      DISPATCH = "false";
-      attachInterrupt(digitalPinToInterrupt(DISPENSE_IR_INPUT1), DISPENSE_IR_INT1, RISING);
-    }
-
-    if (coin_impulsCount >= 4)
-    {
-      detachInterrupt(digitalPinToInterrupt(NOTE_ACCEPTOR_INPUT));
-      delay(500);
-      coin_impulsCount = 0;
-
-      if ((gprs_connected == true) && (mqtt_connected == true))
-      {
-        send_coin_note_UPI_ackMessage(1);
-        coin_mqtt_flag = true;
+        if (digitalRead(COIN_IN_ENABLE_OUTPUT) == HIGH)
+          digitalWrite(COIN_IN_ENABLE_OUTPUT, LOW);
+        // delay(100);
+        attachInterrupt(COIN_ACCEPTOR_INPUT, COIN_ACCEPTOR_INT1, FALLING);
+        attachInterrupt(NOTE_ACCEPTOR_INPUT, NOTE_ACCEPTOR_INT1, FALLING);
+        stock_reload = true;
+        first_stock_empty = true;
+        EEPROM_readAnything(stock_addr, count);
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Instagood");
+        lcd.setCursor(0, 1);
+        lcd.print("In Stock:");
+        lcd.setCursor(9, 1);
+        lcd.print(count);
+        setup3_5inchDisplay();
+        delay(500);
+        digitalWrite(25, LOW);
       }
 
-      deliver();
-      ////delay(5000);
+      // int coin_value = digitalRead(coin);
+      // Serial.println("in");
+      // success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, &uid[0], &uidLength);
+      // // Serial.println("out");
 
-      Serial.printf("\n%d %d %d", dispense_product, check_flag, run_timer);
-      attachInterrupt(digitalPinToInterrupt(DISPENSE_IR_INPUT1), DISPENSE_IR_INT1, RISING);
-    }
+      // if (success) // NFC
+      // {
+      //   Serial.println("buzzer");
+      //   for (uint8_t i = 0; i < uidLength; i++) // NFC
+      //   {
+      //     readCard[i] = uid[i];
+      //   }
+      //   UID[0] = '\0';
+      //   array_to_string(readCard, 4, UID);
 
-    // if (note_impulsCount > 0)
-    //   Serial.println(note_impulsCount);
+      //   delay(5000);
+      //   NFC_DETAILS();
+      // }
 
-    if (note_impulsCount >= 4)
+      // // UPI ACK
+      success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, &uid[0], &uidLength);
+  
+  if (success) {
+    Serial.println("Found a card!");
+    Serial.print("UID Length: ");Serial.print(uidLength, DEC);Serial.println(" bytes");
+    Serial.print("UID Value: ");
+
+    for (uint8_t i=0; i < uidLength; i++) 
     {
+      Serial.print(" 0x");Serial.print(uid[i], HEX); //serial monitor printing
+    }
+    Serial.println("");
+    // Wait 1 second before continuing
+   delay(500);
+    coin_impulsCount = 0;
+    note_impulsCount = 0;
+    //deliver();
+    digitalWrite(NFC_BUZZER,HIGH);
+     delay(500);
+     digitalWrite(NFC_BUZZER,LOW);
+  }
+ 
+ Serial.print("\nchecking for coin /note");
+      if ((COMMAND == "ack") && (DEVICE_ID == ID) && (PAYMENT == "success") && ((DISPATCH == "true")))
+      {
+        send_coin_note_UPI_ackMessage(3);
+        deliver();
+        // delay(1000);
+        upi_mqtt_flag = true;
+        // delay(1000);
+        DISPATCH = "false";
+        attachInterrupt(digitalPinToInterrupt(DISPENSE_IR_INPUT1), DISPENSE_IR_INT1, RISING);
+      }
+      // NFC ACK
+      else if ((COMMAND == "nfc_sack") && (DEVICE_ID == ID) && ((DISPATCH == "true")))
+      {
+        deliver();
+        // delay(1000);
+        nfc_mqtt_flag = true;
+        // delay(1000);
+        DISPATCH = "false";
+        attachInterrupt(digitalPinToInterrupt(DISPENSE_IR_INPUT1), DISPENSE_IR_INT1, RISING);
+      }
+
+      if (coin_impulsCount >= 4)
+      {
+        detachInterrupt(digitalPinToInterrupt(NOTE_ACCEPTOR_INPUT));
+        delay(500);
+        coin_impulsCount = 0;
+
+        if ((gprs_connected == true) && (mqtt_connected == true))
+        {
+          send_coin_note_UPI_ackMessage(1);
+          coin_mqtt_flag = true;
+        }
+
+        deliver();
+        ////delay(5000);
+
+        Serial.printf("\n%d %d %d", dispense_product, check_flag, run_timer);
+        attachInterrupt(digitalPinToInterrupt(DISPENSE_IR_INPUT1), DISPENSE_IR_INT1, RISING);
+      }
+
+      // if (note_impulsCount > 0)
+      //   Serial.println(note_impulsCount);
+
+      if (note_impulsCount >= 4)
+      {
+        detachInterrupt(digitalPinToInterrupt(COIN_ACCEPTOR_INPUT));
+        delay(500);
+        note_impulsCount = 0;
+        if ((gprs_connected == true) && (mqtt_connected == true))
+        {
+          send_coin_note_UPI_ackMessage(2);
+          note_mqtt_flag = true;
+        }
+        // disable coin acceptor interrupt
+        // Serial.println(note_impulsCount);
+
+        deliver();
+        /////delay(5000);
+
+        Serial.printf("\n%d %d %d", dispense_product, check_flag, run_timer);
+        attachInterrupt(digitalPinToInterrupt(DISPENSE_IR_INPUT1), DISPENSE_IR_INT1, RISING);
+      }
+      
+    }
+    else
+    {
+      Serial.println("stock empty");
       detachInterrupt(digitalPinToInterrupt(COIN_ACCEPTOR_INPUT));
-      delay(500);
-      note_impulsCount = 0;
+      detachInterrupt(digitalPinToInterrupt(NOTE_ACCEPTOR_INPUT));
+      digitalWrite(COIN_IN_ENABLE_OUTPUT, HIGH);
+      stock_reload = false;
+      delay(100);
+      lcd.clear();
+      lcd.setCursor(0, 1);
+      lcd.print("Stock Empty");
       if ((gprs_connected == true) && (mqtt_connected == true))
-      {
-        send_coin_note_UPI_ackMessage(2);
-        note_mqtt_flag = true;
-      }
-      // disable coin acceptor interrupt
-      // Serial.println(note_impulsCount);
+        send_emptyStock();
+      digitalWrite(25, HIGH);
+      tft.fillScreen(TFT_BLACK);
+      // delay(1000);
+    }
+  }
+ 
+  // run timer for 4 seconds. if check_flag is not set within 4 seconds turn off motor.
+  if (run_timer == true)
+  {
+    unsigned long currentMillis = millis();
 
-      deliver();
-      /////delay(5000);
+    if (currentMillis - previousMillis >= interval)
+    {
+      detachInterrupt(digitalPinToInterrupt(DISPENSE_IR_INPUT1));
+      // detachInterrupt(digitalPinToInterrupt(DISPENSE_IR_INPUT2));
+      delay(500);
+      previousMillis = currentMillis;
+
+      digitalWrite(MOTOR_FORWARD_PIN, LOW);
+      dispense_product = false;
+      check_flag = false;
+      run_timer = false;
+      state = 2;
+      // state2 = 2;
+      Serial.print("\nDispense stopped by timer");
+      // detachInterrupt(digitalPinToInterrupt(DISPENSE_IR_INPUT));
+      // myservo.attach(SERVO_PIN);
+      // myservo.write(0); // shutter close
+      // delay(1000);
+      // myservo.detach();
+      digitalWrite(COIN_IN_ENABLE_OUTPUT, LOW);
+      delay(1000);
+      note_impulsCount = 0;
+      attachInterrupt(COIN_ACCEPTOR_INPUT, COIN_ACCEPTOR_INT1, FALLING);
+      attachInterrupt(NOTE_ACCEPTOR_INPUT, NOTE_ACCEPTOR_INT1, FALLING);
 
       Serial.printf("\n%d %d %d", dispense_product, check_flag, run_timer);
-      attachInterrupt(digitalPinToInterrupt(DISPENSE_IR_INPUT1), DISPENSE_IR_INT1, RISING);
+      // digitalWrite(COIN_IN_ENABLE_OUTPUT, HIGH);
+      if ((gprs_connected == true) && (mqtt_connected == true))
+        send_error_message();
+
+      coin_mqtt_flag = false;
+      note_mqtt_flag = false;
+      nfc_mqtt_flag = false;
+      upi_mqtt_flag = false;
     }
   }
-  else
+
+  // Serial.printf("\ncheck_flag:%d\n",check_flag);
+  // turn off motor if ir sensor interrupt is triggered and check_flag i true
+  if (state == 0)
   {
-    Serial.println("stock empty");
-    detachInterrupt(digitalPinToInterrupt(COIN_ACCEPTOR_INPUT));
-    detachInterrupt(digitalPinToInterrupt(NOTE_ACCEPTOR_INPUT));
-    digitalWrite(COIN_IN_ENABLE_OUTPUT, HIGH);
-    stock_reload = false;
-    delay(100);
-    lcd.clear();
-    lcd.setCursor(0, 1);
-    lcd.print("Stock Empty");
-    if ((gprs_connected == true) && (mqtt_connected == true))
-      send_emptyStock();
-    digitalWrite(25, HIGH);
-    tft.fillScreen(TFT_BLACK);
-    // delay(1000);
-  }
-}
-
-// run timer for 4 seconds. if check_flag is not set within 4 seconds turn off motor.
-if (run_timer == true)
-{
-  unsigned long currentMillis = millis();
-
-  if (currentMillis - previousMillis >= interval)
-  {
-    detachInterrupt(digitalPinToInterrupt(DISPENSE_IR_INPUT1));
-    // detachInterrupt(digitalPinToInterrupt(DISPENSE_IR_INPUT2));
-    delay(500);
-    previousMillis = currentMillis;
-
-    digitalWrite(MOTOR_FORWARD_PIN, LOW);
-    dispense_product = false;
-    check_flag = false;
-    run_timer = false;
-    state = 2;
-    // state2 = 2;
-    Serial.print("\nDispense stopped by timer");
-    // detachInterrupt(digitalPinToInterrupt(DISPENSE_IR_INPUT));
-    // myservo.attach(SERVO_PIN);
-    // myservo.write(0); // shutter close
-    // delay(1000);
-    // myservo.detach();
-    digitalWrite(COIN_IN_ENABLE_OUTPUT, LOW);
-    delay(1000);
-    note_impulsCount = 0;
-    attachInterrupt(COIN_ACCEPTOR_INPUT, COIN_ACCEPTOR_INT1, FALLING);
-    attachInterrupt(NOTE_ACCEPTOR_INPUT, NOTE_ACCEPTOR_INT1, FALLING);
-
-    Serial.printf("\n%d %d %d", dispense_product, check_flag, run_timer);
-    // digitalWrite(COIN_IN_ENABLE_OUTPUT, HIGH);
-    if ((gprs_connected == true) && (mqtt_connected == true))
-      send_error_message();
-
-    coin_mqtt_flag = false;
-    note_mqtt_flag = false;
-    nfc_mqtt_flag = false;
-    upi_mqtt_flag = false;
-  }
-}
-
-// Serial.printf("\ncheck_flag:%d\n",check_flag);
-// turn off motor if ir sensor interrupt is triggered and check_flag i true
-if (state == 0)
-{
-  if ((dispense_product == true))
-  {
-    detachInterrupt(digitalPinToInterrupt(DISPENSE_IR_INPUT1));
-    // delay(500);
-    Serial.print("\nDispense stopped by IR1");
-
-    delay(1300); // delay(1000)
-    digitalWrite(MOTOR_FORWARD_PIN, LOW);
-
-    check_flag = false;
-    run_timer = false;
-    state = 2;
-    // state2 = 2;
-    delay(1000); // delay(5000)
-    // myservo.attach(SERVO_PIN);
-    // myservo.write(0); // shutter close
-    // delay(1000);
-    // myservo.detach();
-
-    if (count > 0)
-      count--;
-
-    Serial.printf("\ncount: %d\n", count);
-
-    EEPROM_writeAnything(stock_addr, count);
-    EEPROM.commit();
-    delay(100);
-
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Instagood");
-    lcd.setCursor(0, 1);
-    lcd.print("In Stock:");
-    lcd.setCursor(9, 1);
-    lcd.print(count);
-
-    //      if(count == 0)
-    //      count
-
-    // if (!mqtt.connected())
-    // {
-    //   SerialMon.println("=== MQTT NOT CONNECTED ===");
-    //   uint32_t t = millis();
-    //   if (t - lastReconnectAttempt > 10000L)
-    //   {
-    //     lastReconnectAttempt = t;
-    //     if (mqttConnect())
-    //     {
-    //       lastReconnectAttempt = 0;
-    //     }
-    //   }
-    //   delay(1000);
-    //   return;
-    // }
-
-    // Serial.println(coin_mqtt_flag);
-    // Serial.println(note_mqtt_flag);
-    // Serial.println(nfc_mqtt_flag);
-    // Serial.println(upi_mqtt_flag);
-
-    if ((gprs_connected == true) && (mqtt_connected == true))
+    if ((dispense_product == true))
     {
-      if ((coin_mqtt_flag == true) || (note_mqtt_flag == true))
+      detachInterrupt(digitalPinToInterrupt(DISPENSE_IR_INPUT1));
+      //delay(500);
+      Serial.print("\nDispense stopped by IR1");
+
+      delay(1300); // delay(1000)
+      digitalWrite(MOTOR_FORWARD_PIN, LOW);
+
+      check_flag = false;
+      run_timer = false;
+      state = 2;
+      // state2 = 2;
+      delay(1000); // delay(5000)
+      // myservo.attach(SERVO_PIN);
+      // myservo.write(0); // shutter close
+      // delay(1000);
+      // myservo.detach();
+
+      if (count > 0)
+        count--;
+
+      Serial.printf("\ncount: %d\n", count);
+
+      EEPROM_writeAnything(stock_addr, count);
+      EEPROM.commit();
+      delay(100);
+
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Instagood");
+      lcd.setCursor(0, 1);
+      lcd.print("In Stock:");
+      lcd.setCursor(9, 1);
+      lcd.print(count);
+
+      //      if(count == 0)
+      //      count
+
+      // if (!mqtt.connected())
+      // {
+      //   SerialMon.println("=== MQTT NOT CONNECTED ===");
+      //   uint32_t t = millis();
+      //   if (t - lastReconnectAttempt > 10000L)
+      //   {
+      //     lastReconnectAttempt = t;
+      //     if (mqttConnect())
+      //     {
+      //       lastReconnectAttempt = 0;
+      //     }
+      //   }
+      //   delay(1000);
+      //   return;
+      // }
+
+      // Serial.println(coin_mqtt_flag);
+      // Serial.println(note_mqtt_flag);
+      // Serial.println(nfc_mqtt_flag);
+      // Serial.println(upi_mqtt_flag);
+
+      if ((gprs_connected == true) && (mqtt_connected == true))
       {
-        // Serial.println("Coin MQTT start");
-        coinmachine_mqtt();
-        // Serial.println("Coin MQTT End");
-        coin_mqtt_flag = false;
-        note_mqtt_flag = false;
+        if ((coin_mqtt_flag == true) || (note_mqtt_flag == true))
+        {
+          // Serial.println("Coin MQTT start");
+          coinmachine_mqtt();
+          // Serial.println("Coin MQTT End");
+          coin_mqtt_flag = false;
+          note_mqtt_flag = false;
+        }
+        else if (nfc_mqtt_flag == true)
+        {
+          NFC_mqtt();
+          nfc_mqtt_flag = false;
+        }
+        else if (upi_mqtt_flag == true)
+        {
+          upi_mqtt();
+          upi_mqtt_flag = false;
+        }
       }
-      else if (nfc_mqtt_flag == true)
-      {
-        NFC_mqtt();
-        nfc_mqtt_flag = false;
-      }
-      else if (upi_mqtt_flag == true)
-      {
-        upi_mqtt();
-        upi_mqtt_flag = false;
-      }
+      digitalWrite(COIN_IN_ENABLE_OUTPUT, LOW);
+      delay(100);
+      note_impulsCount = 0;
+      attachInterrupt(COIN_ACCEPTOR_INPUT, COIN_ACCEPTOR_INT1, FALLING);
+      // delay(500);
+      attachInterrupt(NOTE_ACCEPTOR_INPUT, NOTE_ACCEPTOR_INT1, FALLING);
+
+      dispense_product = false;
+      Serial.printf("\n%d %d %d\n", dispense_product, check_flag, run_timer);
     }
-    digitalWrite(COIN_IN_ENABLE_OUTPUT, LOW);
-    delay(100);
-    note_impulsCount = 0;
-    attachInterrupt(COIN_ACCEPTOR_INPUT, COIN_ACCEPTOR_INT1, FALLING);
-    // delay(500);
-    attachInterrupt(NOTE_ACCEPTOR_INPUT, NOTE_ACCEPTOR_INT1, FALLING);
-
-    dispense_product = false;
-    Serial.printf("\n%d %d %d\n", dispense_product, check_flag, run_timer);
   }
-}
 
-///////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////////
 
-// STOCK RELOAD
-// else if(
-//{
-//
-//}
-//////////////////////////////////////////////////////////////////
-// mqtt.loop();
+  // STOCK RELOAD
+  // else if(
+  //{
+  //
+  //}
+  //////////////////////////////////////////////////////////////////
+  // mqtt.loop();
 }

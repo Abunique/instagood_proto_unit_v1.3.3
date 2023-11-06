@@ -6,7 +6,7 @@
 #include "PN532_debug.h"
 #include "Arduino.h"
 
-#define PN532_I2C_ADDRESS       (0x48 >>1)
+#define PN532_I2C_ADDRESS       (0x48 >> 1)
 
 
 PN532_I2C::PN532_I2C(TwoWire &wire)
