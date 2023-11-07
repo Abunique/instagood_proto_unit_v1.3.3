@@ -181,9 +181,9 @@ int EEPROM_readAnything(int ee, T &value)
 
 void mqttCallback(char *topic, byte *message, unsigned int len)
 {
-  Serial.print("Message arrived on topic: ");
-  Serial.print(topic);
-  Serial.print("Message: ");
+  Serial.println("Message arrived on topic: ");
+  Serial.println(topic);
+  Serial.println("Message: ");
   String messageTemp;
 
   for (int i = 0; i < len; i++)
