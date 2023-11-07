@@ -21,7 +21,7 @@
 // #include <008_qrcode.h>
 // #include <009_qrcode.h>
 
- #define BOARD_ID_vj_148 148
+ #define BOARD_ID_vj_149 149
  #include <qr-code.h>
 
 #define TINY_GSM_MODEM_SIM800
@@ -311,6 +311,8 @@ void send_coin_note_UPI_ackMessage(int input)
     JSONencoder["command"] = "noteIn";
   if (input == 3)
     JSONencoder["command"] = "UPI";
+    if(input == 4)
+    JSONencoder["command"] = "NFC_OK";
 
   JSONencoder["device_id"] = ID;
   JSONencoder["Date"] = time;
@@ -553,8 +555,8 @@ void setup()
   SerialMon.begin(115200);
   // Serial.println(digitalRead(DISPENSE_IR_INPUT2));
   // delay(500);
-  Serial.println(BOARD_ID_vj_148);
-  Serial.println("Firmware : v1.3.2");
+  Serial.println(BOARD_ID_vj_149);
+  Serial.println("Firmware : v1.3.3");
   setupNFC();
 
   // myservo.attach(SERVO_PIN);
@@ -825,15 +827,16 @@ delay(1000);
     Serial.println("");
     array_to_string(readCard, 4, UID);
     // Wait 1 second before continuing
-   delay(5000);
-   UID[0] = '\0';
+   delay(1000);
+
    NFC_DETAILS();
+   UID[0] = '\0';
     coin_impulsCount = 0;
     note_impulsCount = 0;
     
-    digitalWrite(NFC_BUZZER,HIGH);
+    /*digitalWrite(NFC_BUZZER,HIGH);
      delay(500);
-     digitalWrite(NFC_BUZZER,LOW);
+     digitalWrite(NFC_BUZZER,LOW);*/
   }
  
  Serial.print("\nchecking for coin /note");
@@ -850,6 +853,7 @@ delay(1000);
       // NFC ACK
       else if ((COMMAND == "nfc_sack") && (DEVICE_ID == ID) && ((DISPATCH == "true")))
       {
+        send_coin_note_UPI_ackMessage(4);
         deliver();
         // delay(1000);
         nfc_mqtt_flag = true;
