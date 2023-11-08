@@ -812,7 +812,8 @@ delay(1000);
       // }
 
       // // UPI ACK
-      success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, &uid[0], &uidLength);
+
+   success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, &uid[0], &uidLength);
   
   if (success) {
     Serial.println("Found a card!");
@@ -833,13 +834,8 @@ delay(1000);
    UID[0] = '\0';
     coin_impulsCount = 0;
     note_impulsCount = 0;
-    
-    /*digitalWrite(NFC_BUZZER,HIGH);
-     delay(500);
-     digitalWrite(NFC_BUZZER,LOW);*/
   }
  
- Serial.print("\nchecking for coin /note");
       if ((COMMAND == "ack") && (DEVICE_ID == ID) && (PAYMENT == "success") && ((DISPATCH == "true")))
       {
         send_coin_note_UPI_ackMessage(3);
@@ -862,6 +858,7 @@ delay(1000);
         attachInterrupt(digitalPinToInterrupt(DISPENSE_IR_INPUT1), DISPENSE_IR_INT1, RISING);
       }
 
+ Serial.println("\nchecking for coin /note");
       if (coin_impulsCount >= 4)
       {
         detachInterrupt(digitalPinToInterrupt(NOTE_ACCEPTOR_INPUT));
