@@ -849,7 +849,9 @@ if (NFC_check){
     coin_impulsCount = 0;
     note_impulsCount = 0;
   }
-}
+}else{
+  NFC_check = setupNFC();
+  }
  
       if ((COMMAND == "ack") && (DEVICE_ID == ID) && (PAYMENT == "success") && ((DISPATCH == "true")))
       {
