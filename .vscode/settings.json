@@ -1,5 +1,6 @@
 {
     "files.associations": {
         "*.tpp": "cpp"
-    }
+    },
+    "cmake.sourceDirectory": "C:/Users/HAI/Documents/instagood_proto_unit_v1.3.3/lib/ArduinoJson/test/DynamicJsonBuffer"
 }

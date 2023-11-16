@@ -119,6 +119,7 @@ bool coin_mqtt_flag = false;
 bool upi_mqtt_flag = false;
 bool note_mqtt_flag = false;
 bool nfc_mqtt_flag = false;
+bool reset_pin_status;
 
 ////////////////////////////////////
 String COMMAND;
@@ -130,10 +131,13 @@ String PAYMENT;
 String STOCK;
 int idset;
 ////////////////////////////////////////
-
+bool coin_in;
 void IRAM_ATTR COIN_ACCEPTOR_INT1()
 {
+  coin_in = digitalRead(COIN_ACCEPTOR_INPUT);
+  if(!coin_in){
   coin_impulsCount = coin_impulsCount + 1;
+  }
 }
 
 void IRAM_ATTR NOTE_ACCEPTOR_INT1()
@@ -149,8 +153,11 @@ void IRAM_ATTR DISPENSE_IR_INT1()
 
 void IRAM_ATTR USR_RST_INT1()
 {
-  // check_flag = true;
-  stock_reset = true;
+ reset_pin_status = digitalRead(USR_RST_SWITCH_PIN);
+  if (!reset_pin_status) 
+  {
+   stock_reset = true;
+  }
 }
 
 ////////////////////////////////////////////////////////////////
@@ -281,6 +288,7 @@ void stock_empty()
   Serial.println("Sending message to MQTT topic..");
   Serial.println(JSONmessageBuffer);
   mqtt.publish(topic1, JSONmessageBuffer);
+  digitalWrite(COIN_IN_ENABLE_OUTPUT, HIGH);
 }
 
 void send_error_message()
@@ -465,10 +473,6 @@ void array_to_string(byte a[], unsigned int len, char buffer[])
 bool Pin_status= LOW;
 void deliver()
 {
-  /*
-    put dispatch code here
-  */
- 
   digitalWrite(COIN_IN_ENABLE_OUTPUT, HIGH);
   delay(100);
   Serial.println("dispatch starts");
@@ -480,26 +484,30 @@ void deliver()
   // myservo.detach();
   dispense_product = true;
   check_flag = false;
+  
 
   // turn on motor and enable timer
   if ((dispense_product == true) && (check_flag == false) && (run_timer == false))
   {
     digitalWrite(MOTOR_FORWARD_PIN, HIGH);
     digitalWrite(MOTOR_REVERSE_PIN, LOW);
-
+    coin_impulsCount=0;
+    note_impulsCount=0;
     // enable ir sensor interrupt
     Serial.printf("\n%d %d %d", dispense_product, check_flag, run_timer);
 
     // run timer for 4 seconds, if check_flag == true turn of motor.
     run_timer = true;
     previousMillis = millis();
+
 attachInterrupt(DISPENSE_IR_INPUT1, DISPENSE_IR_INT1, RISING);
+
     // delay(100);
   }
 }
 
 
-void setupNFC()
+bool setupNFC()
 {
   ///////////////////NFC/////////////////
   nfc.begin();
@@ -508,6 +516,7 @@ void setupNFC()
   {
     Serial.println("PN53x card not found!");
     //while(1);//halt
+    return 0;
   }
   else
   {
@@ -518,14 +527,15 @@ void setupNFC()
     // Set the max number of retry attempts to read from a card
   // This prevents us from waiting forever for a card, which is
   // the default behaviour of the PN532.
-  nfc.setPassiveActivationRetries(0x01);
+  nfc.setPassiveActivationRetries(0x00);
     // configure board to read RFID tags
   nfc.SAMConfig();
     Serial.println("Waiting for card (ISO14443A Mifare)...");
     Serial.println("");
+    return 1;
   }
 }
-
+bool NFC_check;
 
 void setup()
 {
@@ -557,7 +567,7 @@ void setup()
   // delay(500);
   Serial.println(BOARD_ID_vj_149);
   Serial.println("Firmware : v1.3.3");
-  setupNFC();
+  NFC_check = setupNFC();
 
   // myservo.attach(SERVO_PIN);
   // myservo.write(0); // shutter close
@@ -673,7 +683,7 @@ void setup()
   //      idset = 2;
   //    }
   //  } while (idset > 3);
-  //  delay(5000);
+  //  delay(5000);attachInterrupt
 
   ///////////////////////////////////////////////
   //
@@ -711,6 +721,7 @@ bool stock_reload = true;
 
 void loop()
 {
+  
   Pin_status = digitalRead(Manual_Pin);
  while(Pin_status){
 digitalWrite(COIN_IN_ENABLE_OUTPUT, HIGH);
@@ -812,13 +823,16 @@ delay(1000);
       // }
 
       // // UPI ACK
-
+if (NFC_check){
    success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, &uid[0], &uidLength);
   
   if (success) {
     Serial.println("Found a card!");
     Serial.print("UID Length: ");Serial.print(uidLength, DEC);Serial.println(" bytes");
     Serial.print("UID Value: ");
+    digitalWrite(NFC_BUZZER,HIGH);
+    delay(500);
+    digitalWrite(NFC_BUZZER,LOW);
 
     for (uint8_t i=0; i < uidLength; i++) 
     {
@@ -835,6 +849,7 @@ delay(1000);
     coin_impulsCount = 0;
     note_impulsCount = 0;
   }
+}
  
       if ((COMMAND == "ack") && (DEVICE_ID == ID) && (PAYMENT == "success") && ((DISPATCH == "true")))
       {
@@ -863,8 +878,13 @@ delay(1000);
       {
         detachInterrupt(digitalPinToInterrupt(NOTE_ACCEPTOR_INPUT));
         delay(500);
+        Serial.println("coin impulse:");
+        Serial.println(coin_impulsCount);
+        Serial.println("Note impulse:");
+        Serial.println(note_impulsCount);
         coin_impulsCount = 0;
-
+        
+        
         if ((gprs_connected == true) && (mqtt_connected == true))
         {
           send_coin_note_UPI_ackMessage(1);
@@ -885,6 +905,10 @@ delay(1000);
       {
         detachInterrupt(digitalPinToInterrupt(COIN_ACCEPTOR_INPUT));
         delay(500);
+        Serial.println("coin impulse:");
+        Serial.println(coin_impulsCount);
+        Serial.println("Note impulse:");
+        Serial.println(note_impulsCount);
         note_impulsCount = 0;
         if ((gprs_connected == true) && (mqtt_connected == true))
         {
@@ -904,11 +928,13 @@ delay(1000);
     }
     else
     {
-      Serial.println("stock empty");
+      Serial.println("stock Empty");
       detachInterrupt(digitalPinToInterrupt(COIN_ACCEPTOR_INPUT));
       detachInterrupt(digitalPinToInterrupt(NOTE_ACCEPTOR_INPUT));
       digitalWrite(COIN_IN_ENABLE_OUTPUT, HIGH);
       stock_reload = false;
+      coin_impulsCount=0;
+      note_impulsCount=0;
       delay(100);
       lcd.clear();
       lcd.setCursor(0, 1);
@@ -972,7 +998,10 @@ delay(1000);
       detachInterrupt(digitalPinToInterrupt(DISPENSE_IR_INPUT1));
       //delay(500);
       Serial.print("\nDispense stopped by IR1");
-
+      coin_impulsCount =0;
+      note_impulsCount =0;
+      if (count > 0){
+        count--;}
       delay(1300); // delay(1000)
       digitalWrite(MOTOR_FORWARD_PIN, LOW);
 
@@ -986,8 +1015,7 @@ delay(1000);
       // delay(1000);
       // myservo.detach();
 
-      if (count > 0)
-        count--;
+    
 
       Serial.printf("\ncount: %d\n", count);
 
